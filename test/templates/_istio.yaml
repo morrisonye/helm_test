@@ -1,0 +1,80 @@
+{{- define "template.VirtualService" -}}
+{{- if eq .Values.VirtualService.enable true }}
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: {{ .Values.nameOverride | default .Chart.Name }}
+spec:
+  gateways:
+    - {{ .Chart.Name }}
+  hosts:
+  {{- range .Values.VirtualService.hosts }}
+    - {{ .  }}
+  {{- end }} 
+  http:
+  {{- range .Values.VirtualService.matchRoute }}
+    {{- with . }}
+    - match:
+        - uri:
+            prefix: {{ .prefix }}
+      route:
+        - destination:
+            host: {{ .host  }}
+            port:
+              number: {{ .number }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end -}}
+
+{{- define "template.Gateway" -}}
+{{- if eq .Values.Gateway.enable true }}
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: {{ .Chart.Name }}
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - hosts:
+      {{- range .Values.VirtualService.hosts }}
+        - {{ .  }}
+      {{- end }} 
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
+{{- if eq .Values.Gateway.https.enable true }}
+    - hosts:
+      {{- range .Values.VirtualService.hosts }}
+        - {{ .  }}
+      {{- end }} 
+      port:
+        name: https
+        number: 443
+        protocol: HTTPS
+      tls:
+        credentialName: {{ .Values.Gateway.credentialName }}
+        mode: SIMPLE
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{- define "template.DestinationRule" -}}
+{{- if eq .Values.DestinationRule.enable true }}
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: {{ .Values.DestinationRule.name }}
+spec:
+  host: {{ .Values.DestinationRule.name }}
+  subsets:
+    - labels:
+        reg: {{ .Values.DestinationRule.name }}
+      name: {{ .Values.DestinationRule.name }}
+  trafficPolicy:
+    loadBalancer:
+      simple: {{ .Values.trafficPolicy.loadBalancer.simple }}
+{{- end }}
+{{- end -}}
