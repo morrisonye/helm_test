@@ -1,0 +1,28 @@
+{{- define "template.ConfigMap" -}}
+{{- if eq .Values.ConfigMap.enable true }}
+{{- if eq .Values.ConfigMap.fileGet true }}
+  {{- $files := .Files }}
+  {{- range tuple .Values.ConfigMap.fileName }}
+        {{ $files.Get . }}
+    {{- end }}
+  {{- end }}
+{{- else -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.nameOverride | default .Chart.Name }}
+data:  
+  {{- range $key, $value := .Values.ConfigMap.envlist }}
+  {{ $key }}: "{{ $value }}"
+  {{- end }}
+  {{- $files := .Files }}
+  {{- range .Values.ConfigMap.filelist }}
+  {{- with . }}
+  {{ .rename }}: |-
+    {{- $files.Get .filename | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}
+
+
+{{- end -}}
